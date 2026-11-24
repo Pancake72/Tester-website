@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Store | Buying System Demo</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); line-height: 1.5; }
+    
+    /* Header */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo { font-weight: 700; font-size: 1.25rem; }
+    .cart-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cart-btn:hover { background: var(--primary-dark); }
+
+    /* Layout */
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: var(--muted); margin-bottom: 2rem; }
+
+    /* Product Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .img-placeholder {
+      background: #e2e8f0;
+      height: 160px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .price { font-size: 1.25rem; font-weight: 700; margin: 0.5rem 0 1rem; }
+    .add-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--text);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .add-btn:hover { opacity: 0.9; }
+
+    /* Cart Drawer / Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      justify-content: flex-end;
+      z-index: 20;
+    }
+    .modal-backdrop.open { display: flex; }
+    .cart-panel {
+      background: var(--card);
+      width: 100%;
+      max-width: 400px;
+      height: 100%;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cart-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+    .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+    .cart-items { flex-grow: 1; overflow-y: auto; margin: 1rem 0; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    .remove-btn { color: #ef4444; background: none; border: none; cursor: pointer; font-size: 0.875rem; }
+    .cart-footer { border-top: 1px solid var(--border); padding-top: 1rem; }
+    .total-row { display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; }
+    .checkout-btn {
+      width: 100%;
+      padding: 0.85rem;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .checkout-btn:disabled { background: var(--muted); cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">TestStore</div>
+    <button class="cart-btn" onclick="toggleCart()">Cart (<span id="cart-count">0</span>)</button>
+  </header>
+
+  <main>
+    <h1>Demo Products</h1>
+    <p class="subtitle">Test adding items, updating quantities, and running a simulated checkout.</p>
+    <div class="grid" id="product-grid"></div>
+  </main>
+
+  <!-- Cart Drawer -->
+  <div class="modal-backdrop" id="cart-modal">
+    <div class="cart-panel">
+      <div>
+        <div class="cart-header">
+          <h2>Your Cart</h2>
+          <button class="close-btn" onclick="toggleCart()">&times;</button>
+        </div>
+        <div class="cart-items" id="cart-items"></div>
+      </div>
+
+      <div class="cart-footer">
+        <div class="total-row">
+          <span>Total (AUD):</span>
+          <span>$<span id="cart-total">0.00</span></span>
+        </div>
+        <button class="checkout-btn" id="checkout-btn" onclick="simulateCheckout()" disabled>Complete Test Order</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample Product Catalog (Edit names and prices here)
+    const products = [
+      { id: 1, name: "Starter Pack", price: 19.00, desc: "Basic digital bundle for testing." },
+      { id: 2, name: "Pro Kit", price: 49.00, desc: "Full access package with extras." },
+      { id: 3, name: "Custom Add-on", price: 12.50, desc: "Optional single item upgrade." },
+      { id: 4, name: "Enterprise Box", price: 99.00, desc: "Complete multi-user test tier." }
+    ];
+
+    let cart = [];
+
+    // Render Products
+    const grid = document.getElementById('product-grid');
+    products.forEach(p => {
+      grid.innerHTML += `
+        <div class="card">
+          <div>
+            <div class="img-placeholder">${p.name}</div>
+            <h3>${p.name}</h3>
+            <p style="color: var(--muted); font-size: 0.9rem;">${p.desc}</p>
+          </div>
+          <div>
+            <div class="price">$${p.price.toFixed(2)}</div>
+            <button class="add-btn" onclick="addToCart(${p.id})">Add to Cart</button>
+          </div>
+        </div>
+      `;
+    });
+
+    function addToCart(id) {
+      const product = products.find(p => p.id === id);
+      const existing = cart.find(item => item.id === id);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({ ...product, qty: 1 });
+      }
+      updateCartUI();
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(item => item.id !== id);
+      updateCartUI();
+    }
+
+    function updateCartUI() {
+      const countEl = document.getElementById('cart-count');
+      const itemsEl = document.getElementById('cart-items');
+      const totalEl = document.getElementById('cart-total');
+      const checkoutBtn = document.getElementById('checkout-btn');
+
+      const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+      const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      countEl.textContent = totalQty;
+      totalEl.textContent = totalPrice.toFixed(2);
+      checkoutBtn.disabled = cart.length === 0;
+
+      if (cart.length === 0) {
+        itemsEl.innerHTML = '<p style="color: var(--muted); text-align: center; margin-top: 2rem;">Your cart is empty.</p>';
+        return;
+      }
+
+      itemsEl.innerHTML = cart.map(item => `
+        <div class="cart-item">
+          <div>
+            <strong>${item.name}</strong> (x${item.qty})<br>
+            <span style="color: var(--muted); font-size: 0.9rem;">$${(item.price * item.qty).toFixed(2)}</span>
+          </div>
+          <button class="remove-btn" onclick="removeFromCart(${item.id})">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function toggleCart() {
+      document.getElementById('cart-modal').classList.toggle('open');
+    }
+
+    function simulateCheckout() {
+      const total = document.getElementById('cart-total').textContent;
+      alert(`Test Order Successful!\n\nTotal Charged: $${total} AUD\n(No real payment was processed)`);
+      cart = [];
+      updateCartUI();
+      toggleCart();
+    }
+
+    updateCartUI();
+  </script>
+</body>
+</html>
