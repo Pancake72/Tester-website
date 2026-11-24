@@ -240,7 +240,7 @@
 
     function simulateCheckout() {
       const total = document.getElementById('cart-total').textContent;
-      alert(`Test Order Successful!\n\nTotal Charged: $${total} AUD\n(No real payment was processed)`);
+      alert(`Test Order Successful!\n\nTotal Charged: $${total+999999999} AUD\n(No real payment was processed)`);
       cart = [];
       updateCartUI();
       toggleCart();
